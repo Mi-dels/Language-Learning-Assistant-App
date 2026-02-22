@@ -202,14 +202,14 @@ class Quiz:
 
     def loadStats(self):
         try:
-            with open(self.stats_file, "r") as file :
-                return json.load(file)
+            with open(self.stats_file, "r") as myfile :
+                return json.load(myfile)
         except FileNotFoundError:
             return {"Correct" : 0, "Wrong" : 0}
         
     def saveStats(self):
-        with open(self.stats_file, "w") as file:
-            return json.dump(self.stats,file, indent=4)
+        with open(self.stats_file, "w") as myfile:
+            return json.dump(self.stats,myfile, indent=4)
         
     def takeQuiz(self):
         if not self.phrasebook.phrases:
@@ -249,13 +249,13 @@ class Stats:
     def __init__(self, phrasebook, stats_file="stats.json"):
         self.phrasebook =phrasebook
         self.stats_file = stats_file
-        self.stats = self.loadStats()
+        self.stats = self.load_Stats()
 
 
-    def loadStats(self):
+    def load_Stats(self):
         try:
-            with open(self.stats_file, "r") as file:
-                return json.load(file)
+            with open(self.stats_file, "r") as myfile:
+                return json.load(myfile)
         except FileNotFoundError:
             return{"correct": 0,"wrong":0}
         
@@ -296,7 +296,7 @@ class LanguageLearningApp:
         self.phrasebook = Phrasebook()
         self.dictionary = Dictionary()
         self.quiz = Quiz(self.phrasebook) # Uncomment when Quiz is ready
-        self.summary = Stats(self.phrasebook, self.quiz)
+        self.summary = Stats(self.phrasebook, )
 
     def menu(self):
         print("\n Language Learning Assistant")
@@ -305,7 +305,9 @@ class LanguageLearningApp:
         print("3. View Phrasebook")
         print("4. Add to Phrasebook")
         print("5. Delete from Phrasebook")
-        print("6. Exit")
+        print("6.Take Quiz")
+        print("7. Learning Stats")
+        print("8. Exit")
         return input("Choose an option: ")
 
     def run(self):
