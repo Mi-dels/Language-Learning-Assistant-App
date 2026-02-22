@@ -1,11 +1,11 @@
 import requests
 import json
 import random
-
+from collections import Counter
 class Translator:
     def __init__(self,):
-        self.langbly_key = "294rNFCUhg7ttXGo7hGizT"
-        self.langbly_url = "https://api.langibly.com/v1/translate"
+        self.langbly_key ="294rNFCUhg7ttXGo7hGizT"
+        self.langbly_url = "https://api.langbly.com/language/translate/v2"
 
     def getLangaugeCode(self,languageName):
         language = {
@@ -29,16 +29,19 @@ class Translator:
 
     def translateWithLangbly(self, text, targetlanguage):
         headers = {
-            "Authorization": f"Bearer {self.langbly_key}"
+            "X-API_Key": self.langbly_key,
+            "Content-Type":  "application/json"
         }
         payload = {
             "q": text,
             "target": targetlanguage,
-            "source": "auto"
+            # "source": "auto"
         }
 
         try:
             response = requests.post(self.langbly_url, json=payload, headers=headers, timeout=5)
+            print("status code:", response.status_code)
+            print("response:", response.text)
             if response.status_code != 200:
                 return None  # Return None so the translate() method moves to the fallback
             data = response.json()
@@ -79,7 +82,7 @@ class Translator:
         if result:
             return result
         else:
-            sourceName = input("Langbly failed. Enter first language")
+            sourceName = input("Langbly failed. Enter first language:")
             sourceLanguage = self.getLangaugeCode(sourceName)
 
             if not sourceLanguage:
@@ -111,8 +114,11 @@ class Phrasebook:
         with open(self.filename, "w") as file:
             json.dump(self.phrases,file,indent=4)
 
-    def addPhrases(self,original,translation):
-        self.phrases[original] = translation
+    def addPhrases(self,original,translation,language):
+        self.phrases[original] = {
+            "translation": translation,
+            "language": language
+        }
         self.savePhrases()
 
     def viewPhrases(self):
@@ -189,7 +195,7 @@ class Dictionary:
 
        
 class Quiz:
-    def __init__(self,phrasebook,stats_file="quiz.stats.json"):
+    def __init__(self,phrasebook,stats_file="stats.json"):
         self.phrasebook = phrasebook
         self.stats_file = stats_file
         self.stats = self.loadStats()  
@@ -212,10 +218,72 @@ class Quiz:
         
         original, translation = random.choice(list(self.phrasebook.phrases.items()))
 
-        print()
+        print("\n Quiz Time")
+        print(f"Translate this phrase: {original}")
+
+        answer = input("Your answer:")
+        if answer.strip().lower() == translation.lower():
+            print("Correct")
+            self.stats["correct"] += 1
+        else:
+            print(f"Wrong Answer. Correct Answer : {translation}")
+            self.stats["wrong"] += 1
+
+        self.saveStats()
+
+
+    def getSummary(self):
+        total = self.stats["correct"] + self.stats["wrong"]
+        if total == 0:
+            return "No quiz attempts yet"
+        percentage = (self.stats["correct"]/total) * 100
+        return {
+            "total attempts": total,
+            "correct": self.stats["correct"],
+            "wrong": self.stats["wrong"],
+            "percentge": round( percentage, 2)
+        }
+
+
 class Stats:
-    def __init__(self):
-        pass
+    def __init__(self, phrasebook, stats_file="stats.json"):
+        self.phrasebook =phrasebook
+        self.stats_file = stats_file
+        self.stats = self.loadStats()
+
+
+    def loadStats(self):
+        try:
+            with open(self.stats_file, "r") as file:
+                return json.load(file)
+        except FileNotFoundError:
+            return{"correct": 0,"wrong":0}
+        
+    def phraseCount(self):
+        return len(self.phrasebook.phrases)
+    
+
+    def mostStudiedLanguages(self):
+        translations = list(self.phrasebook.phrases.values())
+        counter = Counter(translations)
+        return counter.most_common()
+    
+    def quizAccuracy(self):
+        total = self.stats["correct"] + self.stats["wrong"]
+        if total == 0:
+            return 0
+        else:
+            return round((self.stats["correct"]/total) * 100, 2)
+        
+    
+    def get_summary(self):
+        return{
+            "total_phrases": self.phraseCount(),
+            "languages_studied": self.mostStudiedLanguages(),
+            "quiz_accuracy": self.quizAccuracy()
+        }
+
+        
 class LanguageLearningApp:
     def __init__(self):
         pass
@@ -227,7 +295,8 @@ class LanguageLearningApp:
         self.translator = Translator()
         self.phrasebook = Phrasebook()
         self.dictionary = Dictionary()
-        # self.quiz = Quiz(self.phrasebook) # Uncomment when Quiz is ready
+        self.quiz = Quiz(self.phrasebook) # Uncomment when Quiz is ready
+        self.summary = Stats(self.phrasebook, self.quiz)
 
     def menu(self):
         print("\n Language Learning Assistant")
@@ -245,8 +314,8 @@ class LanguageLearningApp:
 
             if choice == "1":
                 text = input("Enter text to translate: ")
-                target = input("Enter target language (e.g., French, Yoruba): ")
-                result = self.translator.translate(text, target)
+                targetLanguage = input("Enter target language (e.g., French, Yoruba): ")
+                result = self.translator.translate(text,targetLanguage)
                 print(f"\nResult: {result}")
 
             elif choice == "2":
@@ -255,6 +324,8 @@ class LanguageLearningApp:
                 print(f"\n--- {data['word'].upper()} ---")
                 print(f"Definition: {data.get('definition', 'N/A')}")
                 print(f"Part of Speech: {data['part_of_speech']}")
+                print(f"Pronounciation:{data['pronounciation']}")
+                print(f"syllables:{data['syllables']}")
 
             elif choice == "3":
                 self.phrasebook.viewPhrases()
@@ -270,9 +341,24 @@ class LanguageLearningApp:
                 self.phrasebook.deletePhrase(orig)
                 print("Deleted Successfully!")
 
+
             elif choice == "6":
+                self.quiz.takeQuiz()
+
+
+            elif choice == "7":
+                results = self.summary.get_summary()
+
+                print("\n --- Summary----")
+                print(f"Total Phrases: {results['total_phrases']}" )
+                print(f"Quiz Accuracy: {results['quiz_accuracy']}%")
+                print(f"Language Studied:")
+                for language, count in results["languages_studied"]:
+                    print(f"-{language}:{count} times")
+
+            elif choice == "8":
                 print("Goodbye!")
-                break
+                exit()
             else:
                 print("Invalid choice, try again!")
 # This starts the app
