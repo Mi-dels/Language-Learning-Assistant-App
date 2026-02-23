@@ -27,31 +27,49 @@ class Translator:
         languageName = languageName.lower()
         return language.get(languageName)
 
-    def translateWithLangbly(self,text,targetlanguage):
+    def translateWithLangbly(self, text, targetlanguage):
         headers = {
-            "Authorization": f"Bearer{self.langbly_key}"
+            "Authorization": f"Bearer {self.langbly_key}"
         }
         payload = {
-            "q" : text,
-            "target" : targetlanguage,
-            "source":"auto"
+            "q": text,
+            "target": targetlanguage,
+            "source": "auto"
         }
 
-        response = requests.post(self.langbly_url, json=payload, headers=headers)
-        if response.status_code != 200:
-            return "Transaction Failed"
-        data = response.json()
-        return data.get("translatedText")
-    
+        try:
+            response = requests.post(self.langbly_url, json=payload, headers=headers, timeout=5)
+            if response.status_code != 200:
+                return None  # Return None so the translate() method moves to the fallback
+            data = response.json()
+            return data.get("translatedText")
+        except requests.exceptions.RequestException:
+            # This catches DNS errors, timeouts, and no internet
+            print("Network error: Could not reach Langibly.")
+            return None
+        except Exception as e:
+            # Catch-all to prevent uncaught exceptions from crashing the app
+            print(f"Unexpected error contacting Langibly: {e}")
+            return None
+
     def translateWithMyMemory(self,text,targetlanguage,sourceLanguage):
         url = "https://api.mymemory.translated.net/get"
         params = {
-            "q" : text,
-            "langpair" : f"{sourceLanguage} | {targetlanguage}"
+            "q": text,
+            # MyMemory expects langpair as "source|target" (no spaces)
+            "langpair": f"{sourceLanguage}|{targetlanguage}"
         }
-
-        response = requests.get(url,params= params)
-        data = response.json()
+        try:
+            response = requests.get(url, params=params, timeout=5)
+            data = response.json()
+            response_data = data.get("responseData", {}) if isinstance(data, dict) else {}
+            return response_data.get("translatedText")
+        except requests.exceptions.RequestException:
+            print("Network error: Could not reach MyMemory.")
+            return None
+        except Exception as e:
+            print(f"Unexpected error contacting MyMemory: {e}")
+            return None 
 
     def translate(self,text,targetLanguageName):
         targetlanguage = self.getLangaugeCode(targetLanguageName)
@@ -66,7 +84,8 @@ class Translator:
 
             if not sourceLanguage:
                 return "First Language Not Supported"
-            return self.translateWithMyMemory(text,sourceLanguage,targetlanguage)
+            # translateWithMyMemory expects (text, targetlanguage, sourceLanguage)
+            return self.translateWithMyMemory(text, targetlanguage, sourceLanguage)
 
             
 
@@ -122,7 +141,7 @@ class Dictionary:
         if word in self.cache:
             return self.cache[word]
         
-        url = f"https://api.dictionaryapi/api/v2/entries/en/{word}"
+        url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
 
         try:
             response = requests.get(url)
@@ -203,7 +222,44 @@ class LanguageLearningApp:
 
 
 
+class LanguageLearningApp:
+    def __init__(self):
+        self.translator = Translator()
+        self.phrasebook = Phrasebook()
+        self.dictionary = Dictionary()
+        # self.quiz = Quiz(self.phrasebook) # Uncomment when Quiz is ready
 
+    def menu(self):
+        print("\n Language Learning Assistant")
+        print("1. Translate Text")
+        print("2. Search Dictionary")
+        print("3. View Phrasebook")
+        return input("Choose an option: ")
+
+    def run(self):
+        while True:
+            choice = self.menu()
+
+            if choice == "1":
+                text = input("Enter text to translate: ")
+                target = input("Enter target language (e.g., French, Yoruba): ")
+                result = self.translator.translate(text, target)
+                print(f"\nResult: {result}")
+
+            elif choice == "2":
+                word = input("Enter word to look up: ")
+                data = self.dictionary.getDictionry(word)
+                print(f"\n--- {data['word'].upper()} ---")
+                print(f"Definition: {data.get('definition', 'N/A')}")
+                print(f"Part of Speech: {data['part_of_speech']}")
+
+            elif choice == "3":
+                self.phrasebook.viewPhrases()
+
+# This starts the app
+if __name__ == "__main__":
+    app = LanguageLearningApp()
+    app.run()
 
 
 
