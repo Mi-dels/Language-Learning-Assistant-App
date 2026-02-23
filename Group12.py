@@ -234,6 +234,9 @@ class LanguageLearningApp:
         print("1. Translate Text")
         print("2. Search Dictionary")
         print("3. View Phrasebook")
+        print("4. Add to Phrasebook")
+        print("5. Delete from Phrasebook")
+        print("6. Exit")
         return input("Choose an option: ")
 
     def run(self):
@@ -256,6 +259,22 @@ class LanguageLearningApp:
             elif choice == "3":
                 self.phrasebook.viewPhrases()
 
+            elif choice == "4":
+                orig = input("Enter original text: ")
+                trans = input("Enter translation")
+                self.phrasebook.addPhrases(orig, trans)
+                print("Added successfully!")
+
+            elif choice == "5":
+                orig = input("Enter phrase to delete: ")
+                self.phrasebook.deletePhrase(orig)
+                print("Deleted Successfully!")
+
+            elif choice == "6":
+                print("Goodbye!")
+                break
+            else:
+                print("Invalid choice, try again!")
 # This starts the app
 if __name__ == "__main__":
     app = LanguageLearningApp()
