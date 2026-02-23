@@ -1,3 +1,10 @@
 {
-    "hello": " bonjour"
+    "hello": {
+        "translation": "enle o",
+        "language": "yoruba"
+    },
+    "food": {
+        "translation": "nourriture",
+        "language": "french"
+    }
 }

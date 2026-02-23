@@ -222,12 +222,13 @@ class Quiz:
         print(f"Translate this phrase: {original}")
 
         answer = input("Your answer:")
-        if answer.strip().lower() == translation.lower():
-            print("Correct")
-            self.stats["correct"] += 1
+        if answer == translation["translation"]:
+            print("Correct Answer. Good Job")
+            self.stats["correct"] = self.stats.get("correct",0) + 1 
         else:
+            print("Wrong")
             print(f"Wrong Answer. Correct Answer : {translation}")
-            self.stats["wrong"] += 1
+            self.stats["wrong"] = self.stats.get("wrong",0) + 1
 
         self.saveStats()
 
@@ -264,8 +265,8 @@ class Stats:
     
 
     def mostStudiedLanguages(self):
-        translations = list(self.phrasebook.phrases.values())
-        counter = Counter(translations)
+        languages = [t['language'] for t in (self.phrasebook.phrases.values())]
+        counter = Counter(languages)
         return counter.most_common()
     
     def quizAccuracy(self):
@@ -334,8 +335,9 @@ class LanguageLearningApp:
 
             elif choice == "4":
                 orig = input("Enter original text: ")
-                trans = input("Enter translation")
-                self.phrasebook.addPhrases(orig, trans)
+                trans = input("Enter translation:")
+                language = input("Enter translated language:")
+                self.phrasebook.addPhrases(orig, trans,language)
                 print("Added successfully!")
 
             elif choice == "5":
@@ -356,7 +358,7 @@ class LanguageLearningApp:
                 print(f"Quiz Accuracy: {results['quiz_accuracy']}%")
                 print(f"Language Studied:")
                 for language, count in results["languages_studied"]:
-                    print(f"-{language}:{count} times")
+                    print(f"{language} : {count} times")
 
             elif choice == "8":
                 print("Goodbye!")
